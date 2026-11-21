@@ -59,11 +59,13 @@ export default function Planner() {
     setDraft((t) => (inTrip(slug) ? { ...t, stops: t.stops.filter((s) => s.destinationSlug !== slug) } : { ...t, stops: [...t.stops, { destinationSlug: slug, day: Math.min(t.days, (t.stops.at(-1)?.day ?? 0) + 1) || 1 }] }));
 
   const auto = () => {
-    const top = matches.filter((m) => !m.warn).slice(0, Math.max(2, draft.days + 1)).map((m) => m.d);
-    const pool = top.length ? top : matches.slice(0, 3).map((m) => m.d);
-    const { stops, dropped } = autoPlan(pool, draft.days);
+    // Take the best in-season matches first, then let lower-ranked places fill any free days.
+    const good = matches.filter((m) => !m.warn).map((m) => m.d);
+    const pool = good.length ? good : matches.slice(0, 3).map((m) => m.d);
+    const { stops, dropped } = autoPlan(pool.slice(0, draft.days * 2), draft.days);
+    const skipped = dropped.filter((d) => pool.indexOf(d) < 3);
     setDraft((t) => ({ ...t, stops }));
-    setNotice({ ok: true, text: `Planned ${stops.length} places over ${draft.days} days${dropped.length ? `. Left out ${dropped.map((d) => d.name).join(', ')} to keep the pace realistic` : ''}.` });
+    setNotice({ ok: true, text: `Planned ${stops.length} places over ${draft.days} days${skipped.length ? `. Left out ${skipped.map((d) => d.name).join(', ')} because it needs more days` : ''}.` });
     document.getElementById('builder')?.scrollIntoView({ behavior: 'smooth' });
   };
 

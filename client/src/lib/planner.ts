@@ -71,7 +71,17 @@ export function rank(list: Destination[], i: PlannerInput): Match[] {
 }
 
 /** Lay chosen destinations over the available days, grouped by area to cut travel. */
-export function autoPlan(chosen: Destination[], days: number) {
+export function autoPlan(candidates: Destination[], days: number) {
+  // Keep ranking priority when choosing, then order the chosen ones by area for the route.
+  const chosen: Destination[] = [];
+  let budgetDays = days;
+  for (const d of candidates) {
+    const cost = d.minDays > 1 ? d.minDays : 0.5;
+    if (cost <= budgetDays) {
+      chosen.push(d);
+      budgetDays -= cost;
+    }
+  }
   const sorted = [...chosen].sort((a, b) => ORDER[CLUSTER[a.slug] ?? 'north'] - ORDER[CLUSTER[b.slug] ?? 'north'] || a.distanceKm - b.distanceKm);
   const stops: Itinerary['stops'] = [];
   const dropped: Destination[] = [];
@@ -86,7 +96,7 @@ export function autoPlan(chosen: Destination[], days: number) {
     // Two short half-day places in the same cluster can share a day.
     const last = stops.at(-1);
     const lastDest = last && chosen.find((c) => c.slug === last.destinationSlug);
-    const share = lastDest && CLUSTER[lastDest.slug] === cluster && lastDest.minDays === 1 && d.minDays === 1 && stops.filter((s) => s.day === last!.day).length < 2 && d.distanceKm + lastDest.distanceKm < 80;
+    const share = lastDest && CLUSTER[lastDest.slug] === cluster && lastDest.minDays === 1 && d.minDays === 1 && stops.filter((s) => s.day === last!.day).length < 2 && d.distanceKm + lastDest.distanceKm < 120;
     if (share) {
       stops.push({ destinationSlug: d.slug, day: last!.day });
     } else {
@@ -94,7 +104,7 @@ export function autoPlan(chosen: Destination[], days: number) {
       day += need;
     }
   }
-  return { stops, dropped, usedDays: Math.max(0, day - 1) };
+  return { stops, dropped: [...dropped, ...candidates.filter((c) => !chosen.includes(c))], usedDays: Math.max(0, day - 1) };
 }
 
 const STAY = { low: [600, 1200], mid: [1800, 3500], high: [6000, 10000] } as const; // per person per night
