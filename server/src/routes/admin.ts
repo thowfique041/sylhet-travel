@@ -93,8 +93,10 @@ admin.patch('/admin/users/:id', async (req: Request, res) => {
 });
 admin.delete('/admin/users/:id', async (req: Request, res) => {
   if (req.params.id === req.auth!.sub) throw new HttpError(400, 'You cannot delete your own account here.');
+  const slugs: string[] = await Review.distinct('destinationSlug', { user: req.params.id });
   await Review.deleteMany({ user: req.params.id });
   await User.findByIdAndDelete(req.params.id);
+  await Promise.all(slugs.map((s) => refreshRating(s)));
   res.status(204).end();
 });
 
