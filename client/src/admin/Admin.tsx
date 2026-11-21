@@ -283,6 +283,7 @@ function Overview() {
   return (
     <div className="space-y-10">
       <h2 className="text-4xl">Overview</h2>
+      <MediaPanel />
       <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ['Page views, 30 days', total],
@@ -504,6 +505,64 @@ function UsersAdmin({ selfId }: { selfId: string }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+interface MediaState {
+  enabled: boolean;
+  total: number;
+  migrated: number;
+  remaining: number;
+  errors?: { path: string; error: string }[];
+}
+
+/** Copies every site photo into the Cloudinary media library, a batch at a time. */
+function MediaPanel() {
+  const [m, setM] = useState<MediaState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    api<MediaState>('/admin/media').then(setM).catch((e: ApiError) => setErr(e.message));
+  }, []);
+  const run = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      for (let i = 0; i < 40; i++) {
+        const r = await api<MediaState & { uploaded: number }>('/admin/media/migrate', { method: 'POST' });
+        setM(r);
+        if (r.errors?.length) setErr(`${r.errors.length} photo(s) failed: ${r.errors[0].error}`);
+        if (r.remaining === 0 || r.uploaded === 0) break;
+      }
+      invalidate('/');
+    } catch (e) {
+      setErr((e as ApiError).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!m) return err ? <p className="text-sm text-red-700">{err}</p> : null;
+  const pct = m.total ? Math.round((m.migrated / m.total) * 100) : 0;
+  return (
+    <div className="rounded-2xl border rule bg-white/60 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h3 className="font-sans text-lg font-semibold">Photos on Cloudinary</h3>
+          <p className="text-sm text-stone">
+            {m.enabled ? `${m.migrated} of ${m.total} photos are served from your Cloudinary media library.` : 'Cloudinary is not configured on the server.'}
+          </p>
+        </div>
+        {m.enabled && m.remaining > 0 && (
+          <button className="btn-deep" onClick={run} disabled={busy}>
+            {busy ? 'Moving photos' : `Move ${m.remaining} photos to Cloudinary`}
+          </button>
+        )}
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/10">
+        <div className="h-full bg-deep transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      {err && <p className="mt-3 text-sm text-red-700">{err}</p>}
     </div>
   );
 }

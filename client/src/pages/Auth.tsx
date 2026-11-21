@@ -10,7 +10,7 @@ import { DestinationCard } from '@/components/DestinationCard';
 import { useData } from '@/hooks/useData';
 import type { Destination } from '@shared/types';
 import { IMG } from '@shared/seed';
-import { ApiError } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { login, register, user } = useAuth();
@@ -124,6 +124,7 @@ export function AccountPage() {
           )}
         </div>
       </div>
+      {user && <PasswordForm />}
       <h2 id="saved" className="mt-16 text-4xl">
         Saved places
       </h2>
@@ -157,5 +158,46 @@ export function AccountPage() {
         )}
       </div>
     </section>
+  );
+}
+
+function PasswordForm() {
+  const [f, setF] = useState({ current: '', next: '' });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api('/auth/password', { method: 'POST', json: f });
+      setMsg({ ok: true, text: 'Password changed.' });
+      setF({ current: '', next: '' });
+    } catch (err) {
+      setMsg({ ok: false, text: (err as ApiError).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <details className="mt-10 max-w-xl rounded-2xl border rule p-5">
+      <summary className="cursor-pointer font-semibold">Change password</summary>
+      <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label>
+          <span className="label">Current password</span>
+          <input className="field" type="password" required autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} />
+        </label>
+        <label>
+          <span className="label">New password</span>
+          <input className="field" type="password" required minLength={8} autoComplete="new-password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} />
+        </label>
+        <div className="flex items-center gap-3 sm:col-span-2">
+          <button className="btn-deep" disabled={busy}>
+            {busy ? 'Saving' : 'Change password'}
+          </button>
+          {msg && <p role="status" className={`text-sm ${msg.ok ? 'text-deep' : 'text-red-700'}`}>{msg.text}</p>}
+        </div>
+      </form>
+    </details>
   );
 }

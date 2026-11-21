@@ -7,6 +7,7 @@ import { Category, Destination, PageView, Place, Post, Review, Slide, Subscriber
 import { HttpError, requireAdmin, requireDb } from '../middleware/auth.js';
 import { cloudinaryEnabled, env } from '../lib/env.js';
 import { refreshRating } from './me.js';
+import { applyMedia, getMediaMap, mediaStatus, migrateBatch } from '../lib/media.js';
 
 export const admin = Router();
 admin.use('/admin', requireAdmin, requireDb);
@@ -55,7 +56,7 @@ const models: Record<keyof typeof schemas, Model<any>> = {
 for (const key of Object.keys(schemas) as (keyof typeof schemas)[]) {
   const M = models[key];
   const S = schemas[key];
-  admin.get(`/admin/${key}`, async (_req, res) => res.json(await M.find().sort({ order: 1, createdAt: -1 }).lean()));
+  admin.get(`/admin/${key}`, async (_req, res) => res.json(applyMedia(await M.find().sort({ order: 1, createdAt: -1 }).lean(), await getMediaMap())));
   admin.post(`/admin/${key}`, async (req, res) => {
     const doc = await M.create(S.parse(req.body));
     res.status(201).json(doc);
@@ -141,4 +142,11 @@ admin.post('/admin/upload', upload.single('file'), async (req, res) => {
       .end(req.file!.buffer);
   });
   res.status(201).json({ url: result.secure_url, w: result.width });
+});
+
+// ---------- Media library (Cloudinary) ----------
+admin.get('/admin/media', async (_req, res) => res.json(await mediaStatus()));
+admin.post('/admin/media/migrate', async (_req, res) => {
+  if (!cloudinaryEnabled()) throw new HttpError(503, 'Cloudinary is not configured on the server.');
+  res.json(await migrateBatch(6));
 });

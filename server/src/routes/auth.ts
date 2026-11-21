@@ -53,4 +53,15 @@ auth.get('/me', requireAuth, requireDb, async (req, res) => {
   res.json(toPublic(user));
 });
 
+auth.post('/password', limiter, requireAuth, requireDb, async (req, res) => {
+  const body = z
+    .object({ current: z.string().min(1, 'Enter your current password.'), next: z.string().min(8, 'New password needs at least 8 characters.').max(100) })
+    .parse(req.body);
+  const user = await User.findById(req.auth!.sub).select('+password');
+  if (!user || !(await bcrypt.compare(body.current, user.password))) throw new HttpError(400, 'Current password is incorrect.');
+  user.password = await bcrypt.hash(body.next, 12);
+  await user.save();
+  res.json({ ok: true });
+});
+
 export { toPublic };

@@ -4,8 +4,25 @@ import { Category, Destination, PageView, Place, Post, Slide, Subscriber } from 
 import { CATEGORIES, DESTINATIONS, EXPERIENCES, FOODS, GEMS, PLACES, POSTS, SLIDES } from '../../../shared/seed.js';
 import { HttpError, requireDb } from '../middleware/auth.js';
 import { z } from 'zod';
+import { applyMedia, getMediaMap } from '../lib/media.js';
 
 export const content = Router();
+
+// Swap in Cloudinary URLs for photos that have been moved to the media library.
+content.use(async (_req, res, next) => {
+  if (!hasDatabase()) return next();
+  try {
+    await connectDB();
+    const map = await getMediaMap();
+    if (Object.keys(map).length) {
+      const send = res.json.bind(res);
+      res.json = (body: unknown) => send(applyMedia(body, map));
+    }
+  } catch {
+    /* fall through: serve without media map */
+  }
+  next();
+});
 
 /** Serve from MongoDB when it is configured, otherwise from the bundled seed content. */
 async function live() {

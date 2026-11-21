@@ -4,6 +4,7 @@ import { Destination, Review, User } from '../models/index.js';
 import { HttpError, optionalAuth, requireAuth, requireDb } from '../middleware/auth.js';
 import { hasDatabase, connectDB } from '../lib/db.js';
 
+
 export const me = Router();
 
 // ---------- Favorites ----------
