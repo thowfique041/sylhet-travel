@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme engine.
+ * Registering the color variables lets the browser interpolate them, so when a
+ * destination changes, every surface that reads them fades to the new palette
+ * together instead of snapping.
+ */
+@property --c-deep { syntax: '<color>'; inherits: true; initial-value: #18232b; }
+@property --c-mist { syntax: '<color>'; inherits: true; initial-value: #e4eaee; }
+@property --c-accent { syntax: '<color>'; inherits: true; initial-value: #8fb6cf; }
+@property --c-stone { syntax: '<color>'; inherits: true; initial-value: #8b9298; }
+@property --c-glow { syntax: '<color>'; inherits: true; initial-value: #f3f6f8; }
+
+:root {
+  --c-deep: #18232b;
+  --c-mist: #e4eaee;
+  --c-accent: #8fb6cf;
+  --c-stone: #8b9298;
+  --c-glow: #f3f6f8;
+  --theme-ms: 1400ms;
+  transition:
+    --c-deep var(--theme-ms) cubic-bezier(0.65, 0, 0.35, 1),
+    --c-mist var(--theme-ms) cubic-bezier(0.65, 0, 0.35, 1),
+    --c-accent var(--theme-ms) cubic-bezier(0.65, 0, 0.35, 1),
+    --c-stone var(--theme-ms) cubic-bezier(0.65, 0, 0.35, 1),
+    --c-glow var(--theme-ms) cubic-bezier(0.65, 0, 0.35, 1);
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --theme-ms: 1ms; }
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    @apply bg-mist font-sans text-deep antialiased;
+    font-size: 17px;
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3 { @apply font-display; font-optical-sizing: auto; letter-spacing: -0.015em; line-height: 1.02; }
+  ::selection { background: var(--c-accent); color: var(--c-deep); }
+  :focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; border-radius: 2px; }
+  img { @apply select-none; }
+}
+
+@layer components {
+  .wrap { @apply mx-auto w-full max-w-[1360px] px-5 sm:px-8 lg:px-12; }
+  .measure { max-width: 64ch; }
+
+  /* Hairline in the current stone color, softened against the page */
+  .rule { border-color: color-mix(in srgb, var(--c-stone) 35%, transparent); }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold transition-[background-color,color,transform,box-shadow] duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-accent { @apply btn bg-accent text-deep hover:shadow-[0_10px_30px_-12px_var(--c-accent)]; }
+  .btn-deep { @apply btn bg-deep text-glow hover:bg-[color-mix(in_srgb,var(--c-deep)_85%,white)]; }
+  .btn-line { @apply btn border border-current bg-transparent hover:bg-[color-mix(in_srgb,currentColor_10%,transparent)]; }
+
+  .field {
+    @apply w-full rounded-xl border bg-white/70 px-4 py-3 text-[15px] text-deep outline-none transition placeholder:text-stone focus:border-deep focus:bg-white;
+    border-color: color-mix(in srgb, var(--c-stone) 45%, transparent);
+  }
+  .label { @apply mb-1.5 block text-sm font-semibold text-deep; }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition;
+    border-color: color-mix(in srgb, currentColor 30%, transparent);
+  }
+  .chip[aria-pressed='true'] { @apply border-deep bg-deep text-glow; }
+
+  /* Ghosted Bangla place name used as a typographic layer in the hero */
+  .ghost-bn {
+    @apply font-bn font-bold leading-none;
+    color: transparent;
+    -webkit-text-stroke: 1.2px color-mix(in srgb, var(--c-accent) 70%, transparent);
+  }
+
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.09;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@layer utilities {
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+/* Leaflet map: keep controls in the site palette */
+.leaflet-container { font-family: Figtree, system-ui, sans-serif; background: var(--c-mist); border-radius: 1.25rem; }
+.leaflet-popup-content-wrapper { border-radius: 14px; }
+.leaflet-popup-content { margin: 12px 14px; font-size: 14px; }
+.map-pin { width: 18px; height: 18px; border-radius: 999px; background: var(--c-accent); border: 3px solid var(--c-deep); box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+.map-pin.is-main { width: 26px; height: 26px; }
