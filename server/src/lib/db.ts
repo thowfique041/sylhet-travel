@@ -40,16 +40,17 @@ export async function connectDB() {
 /** Fill an empty database with the bundled Sylhet content and create the first admin. */
 export async function seedIfEmpty() {
   if ((await Destination.estimatedDocumentCount()) === 0) {
-    await Category.insertMany(CATEGORIES);
-    await Destination.insertMany(DESTINATIONS);
-    await Slide.insertMany(SLIDES);
-    await Place.insertMany(PLACES);
-    await Post.insertMany(POSTS);
+    // Plain seed objects; cast because Mongoose types expect timestamp fields.
+    await Category.insertMany(CATEGORIES as never[]);
+    await Destination.insertMany(DESTINATIONS as never[]);
+    await Slide.insertMany(SLIDES as never[]);
+    await Place.insertMany(PLACES as never[]);
+    await Post.insertMany(POSTS as never[]);
     console.log('[db] seeded Sylhet content');
   }
   if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
     const email = env.ADMIN_EMAIL.toLowerCase();
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({ email } as never);
     if (!existing) {
       await User.create({ name: 'Admin', email, password: await bcrypt.hash(env.ADMIN_PASSWORD, 12), role: 'admin' });
       console.log(`[db] created admin ${email}`);

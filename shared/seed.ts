@@ -32,7 +32,7 @@ export const CATEGORIES: Category[] = [
 
 const IMG = {
   jaflong: [
-    p('4/4d/Jaflong_Sylhet.jpg', 4880, 'The Piyain river and stone beds at Jaflong with the Meghalaya hills behind'),
+    p('4/4d/Jaflong_Sylhet.jpg', 4880, 'A tea worker crossing the garden at Jaflong under the Meghalaya hills'),
     p('6/69/Jaflong_View.jpeg', 2048, 'View across Jaflong towards the border hills'),
     p('1/1d/Tea_Garden_of_Jaflong.jpg', 4000, 'Tea garden on the slopes at Jaflong'),
     p('4/46/Jaflong,_sylhet_02.jpg', 2304, 'Boats moored on the river at Jaflong'),
@@ -64,8 +64,8 @@ const IMG = {
     p('2/20/বিছানাকান্দির_সূযাস্ত.jpg', 2643, 'Sunset over Bisanakandi'),
   ],
   lalakhal: [
-    p('5/54/Lalakhal_Sylhet.jpg', 4000, 'Turquoise water of the Sari river at Lalakhal'),
-    p('b/ba/Lalakhal_2021.jpg', 4096, 'Wide view of Lalakhal and the green banks'),
+    p('b/ba/Lalakhal_2021.jpg', 4096, 'Wide view of the Sari river at Lalakhal and its green banks'),
+    p('5/54/Lalakhal_Sylhet.jpg', 4000, 'Evening sky over the Sari river at Lalakhal'),
     p('2/23/Lalakhal_2.jpg', 3968, 'Boats on the blue water at Lalakhal'),
     p('8/8b/Lalakhal_3.jpg', 3968, 'Hills and blue river at Lalakhal'),
     p('e/e3/Lalakhal_সিলেট.jpg', 4000, 'The Sari river bending through Lalakhal'),

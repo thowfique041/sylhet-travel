@@ -140,6 +140,7 @@ export function Hero({ slides, destinations }: Props) {
 
         {/* Overlays read the live theme so they fade with the palette */}
         <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(to_top,var(--c-deep)_0%,color-mix(in_srgb,var(--c-deep)_55%,transparent)_30%,transparent_62%)] lg:bg-[linear-gradient(100deg,color-mix(in_srgb,var(--c-deep)_88%,transparent)_0%,color-mix(in_srgb,var(--c-deep)_35%,transparent)_42%,transparent_70%),linear-gradient(to_top,color-mix(in_srgb,var(--c-deep)_80%,transparent),transparent_35%)]" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[3] h-40 bg-gradient-to-b from-[color-mix(in_srgb,var(--c-deep)_70%,transparent)] to-transparent" />
         <div aria-hidden className="grain pointer-events-none absolute inset-0 z-[3]" />
         {/* Drifting mist bands, the subtle living background */}
         {!reduce && (
@@ -226,9 +227,9 @@ export function Hero({ slides, destinations }: Props) {
               aria-selected={i === index}
               aria-label={s.title}
               onClick={() => go(i)}
-              className={cx('group relative flex items-center gap-4 text-right transition-opacity', i === index ? 'opacity-100' : 'opacity-55 hover:opacity-90')}
+              className={cx('group relative flex items-center gap-4 text-right transition-opacity', i === index ? 'opacity-100' : 'opacity-70 hover:opacity-100')}
             >
-              <span className={cx('text-sm font-medium transition-transform', i === index ? 'translate-x-0' : 'translate-x-2 group-hover:translate-x-0')}>{s.title}</span>
+              <span className={cx('text-sm font-semibold transition-transform [text-shadow:0_1px_10px_rgba(0,0,0,.75)]', i === index ? 'translate-x-0' : 'translate-x-2 group-hover:translate-x-0')}>{s.title}</span>
               <span className={cx('relative h-[60px] w-[88px] overflow-hidden rounded-[10px] ring-2 transition', i === index ? 'ring-accent' : 'ring-transparent')}>
                 <Photo photo={s.image} width={960} sizes="88px" className="h-full w-full object-cover" />
               </span>
