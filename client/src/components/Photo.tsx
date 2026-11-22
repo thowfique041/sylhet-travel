@@ -1,6 +1,7 @@
 import { useState, type ImgHTMLAttributes } from 'react';
 import { originalUrl, photoSrcSet, photoUrl, type PhotoLike } from '@/lib/images';
 import { cx } from '@/lib/format';
+import { useMedia } from '@/context/MediaContext';
 
 interface Props extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   photo?: PhotoLike;
@@ -15,8 +16,11 @@ interface Props extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
  * fails, it retries with the original file, then falls back to a themed tone
  * so a broken-image icon never shows.
  */
-export function Photo({ photo, width = 1280, sizes = '100vw', priority, className, alt, ...rest }: Props) {
+export function Photo({ photo: raw, width = 1280, sizes = '100vw', priority, className, alt, ...rest }: Props) {
+  const media = useMedia();
   const [stage, setStage] = useState(0);
+  const hit = raw && !raw.url && raw.path ? media[raw.path] : undefined;
+  const photo = hit ? { ...raw!, url: hit.url, w: hit.w } : raw;
   const [loaded, setLoaded] = useState(false);
   if (!photo || stage > 1 || (!photo.path && !photo.url)) {
     return <div aria-hidden className={cx('bg-[linear-gradient(135deg,var(--c-deep),var(--c-stone))]', className)} />;

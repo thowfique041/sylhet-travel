@@ -8,6 +8,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { TripProvider } from './context/TripContext';
+import { MediaProvider } from './context/MediaContext';
 import './styles/index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <MotionConfig reducedMotion="user">
           <ThemeProvider>
+            <MediaProvider>
             <AuthProvider>
               <FavoritesProvider>
                 <TripProvider>
@@ -23,6 +25,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 </TripProvider>
               </FavoritesProvider>
             </AuthProvider>
+            </MediaProvider>
           </ThemeProvider>
         </MotionConfig>
       </BrowserRouter>

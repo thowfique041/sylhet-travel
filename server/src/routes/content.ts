@@ -97,6 +97,13 @@ content.get('/posts/:slug', async (req, res) => {
 });
 
 // Editorial collections that live in code: experiences, food guide and hidden gems.
+// Public path -> Cloudinary URL map so the client can resolve photos it bundles itself.
+content.get('/media', async (_req, res) => {
+  if (!(await live())) return res.json({});
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(await getMediaMap());
+});
+
 content.get('/experiences', (_req, res) => res.json(EXPERIENCES));
 content.get('/foods', (_req, res) => res.json(FOODS));
 content.get('/gems', (_req, res) => res.json(GEMS));

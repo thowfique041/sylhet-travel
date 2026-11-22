@@ -67,6 +67,12 @@ See `.env.example`. On Vercel set them in Project Settings, Environment Variable
 - Admin: slider, destinations (including theme colors and featured flag), categories, restaurants and hotels, stories, review moderation, users, statistics
 - Reduced-motion support throughout, keyboard focus states, lazy-loaded responsive images
 
+## Images on Cloudinary
+
+All photos live in the Cloudinary media library (folder `sylhet`). The original Wikimedia Commons path of each photo is kept as its ID (for credits), and a path to Cloudinary URL map is stored in MongoDB. The API and the client both swap in the Cloudinary URL, with automatic format, quality and width (`f_auto,q_auto,w_…`).
+
+To move new photos (for example a Commons path added in the admin) into Cloudinary, open Admin, Overview and press "Move photos to Cloudinary". The admin's browser downloads each photo and uploads it straight to Cloudinary with a server-side signature. Photos uploaded through the admin image picker go to Cloudinary directly.
+
 ## Photo credits
 
 All photographs are hotlinked from Wikimedia Commons and credited on `/credits`, with a link to each file page showing the author and license.
