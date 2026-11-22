@@ -27,6 +27,9 @@ export async function getMediaMap(): Promise<MediaMap> {
 export function applyMedia<T>(value: T, map: MediaMap): T {
   if (!value || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((v) => applyMedia(v, map)) as T;
+  // Only walk plain objects; leave ObjectId, Date, Buffer and other instances untouched.
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return value;
   const o = value as Record<string, unknown>;
   if (typeof o.path === 'string' && typeof o.w === 'number' && !o.url && map[o.path]) {
     return { ...o, url: map[o.path].url, w: map[o.path].w } as T;

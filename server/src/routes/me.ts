@@ -9,18 +9,18 @@ export const me = Router();
 
 // ---------- Favorites ----------
 me.put('/me/favorites/:slug', requireAuth, requireDb, async (req, res) => {
-  const user = await User.findByIdAndUpdate(req.auth!.sub, { $addToSet: { favorites: req.params.slug } }, { new: true }).lean();
+  const user = await User.findByIdAndUpdate(req.auth!.sub, { $addToSet: { favorites: req.params.slug } }, { returnDocument: 'after' }).lean();
   res.json(user?.favorites ?? []);
 });
 
 me.delete('/me/favorites/:slug', requireAuth, requireDb, async (req, res) => {
-  const user = await User.findByIdAndUpdate(req.auth!.sub, { $pull: { favorites: req.params.slug } }, { new: true }).lean();
+  const user = await User.findByIdAndUpdate(req.auth!.sub, { $pull: { favorites: req.params.slug } }, { returnDocument: 'after' }).lean();
   res.json(user?.favorites ?? []);
 });
 
 me.post('/me/favorites/merge', requireAuth, requireDb, async (req, res) => {
   const slugs = z.array(z.string()).max(50).parse(req.body?.slugs ?? []);
-  const user = await User.findByIdAndUpdate(req.auth!.sub, { $addToSet: { favorites: { $each: slugs } } }, { new: true }).lean();
+  const user = await User.findByIdAndUpdate(req.auth!.sub, { $addToSet: { favorites: { $each: slugs } } }, { returnDocument: 'after' }).lean();
   res.json(user?.favorites ?? []);
 });
 
@@ -88,7 +88,7 @@ me.post('/destinations/:slug/reviews', requireAuth, requireDb, async (req, res) 
   const review = await Review.findOneAndUpdate(
     { destinationSlug: req.params.slug, user: req.auth!.sub },
     { ...body, status: 'pending' },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   );
   res.status(201).json(review);
 });

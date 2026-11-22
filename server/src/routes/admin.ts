@@ -62,12 +62,12 @@ for (const key of Object.keys(schemas) as (keyof typeof schemas)[]) {
     res.status(201).json(doc);
   });
   admin.put(`/admin/${key}/:id`, async (req, res) => {
-    const doc = await M.findByIdAndUpdate(req.params.id, S.parse(req.body), { new: true, runValidators: true });
+    const doc = await M.findByIdAndUpdate(req.params.id, S.parse(req.body), { returnDocument: 'after', runValidators: true });
     if (!doc) throw new HttpError(404, 'Item not found.');
     res.json(doc);
   });
   admin.patch(`/admin/${key}/:id`, async (req, res) => {
-    const doc = await M.findByIdAndUpdate(req.params.id, (S as z.ZodObject<any>).partial().parse(req.body), { new: true });
+    const doc = await M.findByIdAndUpdate(req.params.id, (S as z.ZodObject<any>).partial().parse(req.body), { returnDocument: 'after' });
     if (!doc) throw new HttpError(404, 'Item not found.');
     res.json(doc);
   });
@@ -87,7 +87,7 @@ admin.patch('/admin/users/:id', async (req: Request, res) => {
   if (req.params.id === req.auth!.sub && (body.role === 'user' || body.active === false)) {
     throw new HttpError(400, 'You cannot remove your own admin access.');
   }
-  const user = await User.findByIdAndUpdate(req.params.id, body, { new: true }).select('name email role active createdAt').lean();
+  const user = await User.findByIdAndUpdate(req.params.id, body, { returnDocument: 'after' }).select('name email role active createdAt').lean();
   if (!user) throw new HttpError(404, 'User not found.');
   res.json(user);
 });
@@ -107,7 +107,7 @@ admin.get('/admin/reviews', async (req, res) => {
 });
 admin.patch('/admin/reviews/:id', async (req, res) => {
   const { status } = z.object({ status: z.enum(['pending', 'approved', 'rejected']) }).parse(req.body);
-  const review = await Review.findByIdAndUpdate(req.params.id, { status }, { new: true });
+  const review = await Review.findByIdAndUpdate(req.params.id, { status }, { returnDocument: 'after' });
   if (!review) throw new HttpError(404, 'Review not found.');
   await refreshRating(review.destinationSlug);
   res.json(review);
