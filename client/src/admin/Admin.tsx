@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
-import { BarChart3, BookOpen, Database, Image as ImageIcon, Layers, MapPinned, MessageSquare, Store, Users } from 'lucide-react';
+import { Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { BarChart3, BookOpen, Database, LogOut, Image as ImageIcon, Layers, MapPinned, MessageSquare, Store, Users } from 'lucide-react';
 import type { Category, Destination } from '@shared/types';
 import { THEMES } from '@shared/seed';
 import { useAuth } from '@/context/AuthContext';
@@ -26,7 +26,8 @@ const NAV = [
 ];
 
 export default function Admin() {
-  const { user, ready } = useAuth();
+  const { user, ready, logout } = useAuth();
+  const navigate = useNavigate();
   const [db, setDb] = useState<string>('checking');
   const [cats, setCats] = useState<Category[]>([]);
   const [dests, setDests] = useState<Destination[]>([]);
@@ -101,6 +102,15 @@ export default function Admin() {
           <Link to="/" className="mt-4 hidden px-3 text-sm text-stone hover:text-deep lg:block">
             View the site
           </Link>
+          <button
+            onClick={() => {
+              logout();
+              navigate('/');
+            }}
+            className="flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-red-700 hover:bg-red-50 lg:mt-2"
+          >
+            <LogOut size={17} /> Sign out
+          </button>
         </nav>
         <main className="min-w-0">
           <Routes>

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Heart, Menu, Search, User, X } from 'lucide-react';
+import { ChevronDown, Heart, LayoutDashboard, LogOut, Menu, Search, User, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { SearchOverlay } from './SearchOverlay';
@@ -16,7 +16,13 @@ const NAV = [
 
 export function Header() {
   const { pathname } = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const signOut = () => {
+    logout();
+    setMenu(false);
+    navigate('/');
+  };
   const { favorites } = useFavorites();
   const [scrolled, setScrolled] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -80,10 +86,14 @@ export function Header() {
                 <span className="absolute right-1 top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 text-[11px] font-bold text-deep">{favorites.length}</span>
               )}
             </Link>
-            <Link to={user ? (user.role === 'admin' ? '/admin' : '/account') : '/login'} className="hidden h-10 items-center gap-2 rounded-full px-3 text-[15px] font-medium hover:bg-white/10 sm:flex">
-              <User size={18} />
-              <span>{user ? user.name.split(' ')[0] : 'Sign in'}</span>
-            </Link>
+            {user ? (
+              <UserMenu name={user.name} isAdmin={user.role === 'admin'} onSignOut={signOut} />
+            ) : (
+              <Link to="/login" className="hidden h-10 items-center gap-2 rounded-full px-3 text-[15px] font-medium hover:bg-white/10 sm:flex">
+                <User size={18} />
+                <span>Sign in</span>
+              </Link>
+            )}
             <button className="grid h-10 w-10 place-items-center rounded-full md:hidden" onClick={() => setMenu(true)} aria-label="Open menu" aria-expanded={menu}>
               <Menu size={22} />
             </button>
@@ -110,13 +120,18 @@ export function Header() {
               </button>
             </div>
             <nav className="wrap mt-6 flex flex-col gap-1" aria-label="Mobile">
-              {[{ to: '/', label: 'Home' }, ...NAV, { to: user ? '/account' : '/login', label: user ? 'My account' : 'Sign in' }].map((n, i) => (
+              {[{ to: '/', label: 'Home' }, ...NAV, { to: user ? '/account' : '/login', label: user ? 'My account' : 'Sign in' }, ...(user?.role === 'admin' ? [{ to: '/admin', label: 'Admin' }] : [])].map((n, i) => (
                 <motion.div key={n.to} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.05 }}>
                   <Link to={n.to} className="block py-2 font-display text-5xl">
                     {n.label}
                   </Link>
                 </motion.div>
               ))}
+              {user && (
+                <motion.button initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} onClick={signOut} className="mt-4 flex items-center gap-3 py-2 text-left text-xl text-glow/75">
+                  <LogOut size={20} /> Sign out
+                </motion.button>
+              )}
             </nav>
             <p className="wrap mt-auto pb-10 font-bn text-lg opacity-60">পাহাড়, নদী আর চায়ের দেশ</p>
           </motion.div>
@@ -124,5 +139,59 @@ export function Header() {
       </AnimatePresence>
       <SearchOverlay open={search} onClose={() => setSearch(false)} />
     </>
+  );
+}
+
+function UserMenu({ name, isAdmin, onSignOut }: { name: string; isAdmin: boolean; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+  const item = 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] hover:bg-black/5';
+  return (
+    <div ref={ref} className="relative hidden sm:block">
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu" className="flex h-10 items-center gap-2 rounded-full px-3 text-[15px] font-medium hover:bg-white/10">
+        <User size={18} />
+        <span>{name.split(' ')[0]}</span>
+        <ChevronDown size={15} className={cx('transition-transform', open && 'rotate-180')} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            role="menu"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className="absolute right-0 top-12 w-56 rounded-2xl border rule bg-mist p-2 text-deep shadow-xl"
+          >
+            <Link role="menuitem" to="/account" className={item}>
+              <User size={17} /> My account
+            </Link>
+            {isAdmin && (
+              <Link role="menuitem" to="/admin" className={item}>
+                <LayoutDashboard size={17} /> Admin dashboard
+              </Link>
+            )}
+            <div className="my-1 border-t rule" />
+            <button role="menuitem" onClick={onSignOut} className={cx(item, 'text-red-700')}>
+              <LogOut size={17} /> Sign out
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
