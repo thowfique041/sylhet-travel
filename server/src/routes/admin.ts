@@ -7,7 +7,7 @@ import { Category, Destination, PageView, Place, Post, Review, Slide, Subscriber
 import { HttpError, requireAdmin, requireDb } from '../middleware/auth.js';
 import { cloudinaryEnabled, env } from '../lib/env.js';
 import { refreshRating } from './me.js';
-import { applyMedia, getMediaMap, mediaStatus, migrateBatch } from '../lib/media.js';
+import { applyMedia, getMediaMap, mediaStatus, migrateBatch, pendingPhotos, recordUpload, signUpload } from '../lib/media.js';
 
 export const admin = Router();
 admin.use('/admin', requireAdmin, requireDb);
@@ -151,4 +151,15 @@ admin.get('/admin/media', async (_req, res) => res.json(await mediaStatus()));
 admin.post('/admin/media/migrate', async (_req, res) => {
   if (!cloudinaryEnabled()) throw new HttpError(503, 'Cloudinary is not configured on the server.');
   res.json(await migrateBatch(6));
+});
+admin.get('/admin/media/pending', async (_req, res) => res.json(await pendingPhotos()));
+admin.post('/admin/media/sign', (req, res) => {
+  if (!cloudinaryEnabled()) throw new HttpError(503, 'Cloudinary is not configured on the server.');
+  const { publicId } = z.object({ publicId: z.string().regex(/^[\w-]{1,80}$/) }).parse(req.body);
+  res.json(signUpload(publicId));
+});
+admin.post('/admin/media/record', async (req, res) => {
+  const b = z.object({ path: z.string().min(3), url: z.string().url().startsWith('https://res.cloudinary.com/'), w: z.number().int().positive() }).parse(req.body);
+  await recordUpload(b.path, b.url, b.w);
+  res.json({ ok: true });
 });

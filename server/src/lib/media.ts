@@ -112,3 +112,24 @@ export async function migrateBatch(size = 6) {
   const status = await mediaStatus();
   return { uploaded: pending.length - errors.length, errors, ...status };
 }
+
+/** Photos not yet in the media library, with the source the browser should download. */
+export async function pendingPhotos() {
+  const map = await getMediaMap();
+  return (await allPhotos()).filter((p) => !map[p.path]).map((p) => ({ path: p.path, w: p.w, alt: p.alt ?? '', source: sourceUrl(p), publicId: publicId(p.path) }));
+}
+
+/** Signed parameters so the admin's browser can upload straight to Cloudinary. */
+export function signUpload(publicIdValue: string) {
+  const timestamp = Math.round(Date.now() / 1000);
+  const params = { folder: 'sylhet', public_id: publicIdValue, timestamp };
+  const signature = cloudinary.utils.api_sign_request(params, env.CLOUDINARY_API_SECRET!);
+  return { ...params, signature, apiKey: env.CLOUDINARY_API_KEY, cloudName: env.CLOUDINARY_CLOUD_NAME };
+}
+
+export async function recordUpload(path: string, url: string, w: number) {
+  cache = null;
+  const map = { ...(await getMediaMap()), [path]: { url, w } };
+  await Setting.updateOne({ key: KEY }, { $set: { value: map } }, { upsert: true });
+  cache = { map, at: Date.now() };
+}

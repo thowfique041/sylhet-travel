@@ -528,13 +528,35 @@ function MediaPanel() {
   const run = async () => {
     setBusy(true);
     setErr('');
+    const failed: string[] = [];
     try {
-      for (let i = 0; i < 40; i++) {
-        const r = await api<MediaState & { uploaded: number }>('/admin/media/migrate', { method: 'POST' });
-        setM(r);
-        if (r.errors?.length) setErr(`${r.errors.length} photo(s) failed: ${r.errors[0].error}`);
-        if (r.remaining === 0 || r.uploaded === 0) break;
+      const pending = await api<{ path: string; source: string; publicId: string }[]>('/admin/media/pending');
+      for (const p of pending) {
+        try {
+          // The browser downloads from Wikimedia, then uploads straight to Cloudinary with a server signature.
+          const img = await fetch(p.source);
+          if (!img.ok) throw new Error(`download ${img.status}`);
+          const blob = await img.blob();
+          const sig = await api<{ cloudName: string; apiKey: string; timestamp: number; signature: string; folder: string; public_id: string }>('/admin/media/sign', { method: 'POST', json: { publicId: p.publicId } });
+          const fd = new FormData();
+          fd.append('file', blob);
+          fd.append('api_key', sig.apiKey);
+          fd.append('timestamp', String(sig.timestamp));
+          fd.append('signature', sig.signature);
+          fd.append('folder', sig.folder);
+          fd.append('public_id', sig.public_id);
+          const up = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd });
+          const out = await up.json();
+          if (!up.ok) throw new Error(out?.error?.message ?? `upload ${up.status}`);
+          await api('/admin/media/record', { method: 'POST', json: { path: p.path, url: out.secure_url, w: out.width } });
+          setM((s) => (s ? { ...s, migrated: s.migrated + 1, remaining: s.remaining - 1 } : s));
+        } catch (e) {
+          failed.push(`${p.path.split('/').pop()}: ${(e as Error).message}`);
+        }
+        await new Promise((r) => setTimeout(r, 400));
       }
+      if (failed.length) setErr(`${failed.length} photo(s) could not be moved. Run again to retry. First error: ${failed[0]}`);
+      setM(await api<MediaState>('/admin/media'));
       invalidate('/');
     } catch (e) {
       setErr((e as ApiError).message);
