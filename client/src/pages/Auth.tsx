@@ -5,6 +5,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useTrip } from '@/context/TripContext';
 import { Seo } from '@/components/Seo';
 import { Photo } from '@/components/Photo';
+import { PasswordInput } from '@/components/PasswordInput';
 import { SavedTrips } from './Planner';
 import { DestinationCard } from '@/components/DestinationCard';
 import { useData } from '@/hooks/useData';
@@ -18,14 +19,20 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = params.get('next') || '/account';
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (user) return <Navigate to={user.role === 'admin' && next === '/account' ? '/admin' : next} replace />;
 
+  const mismatch = mode === 'register' && form.confirm.length > 0 && form.confirm !== form.password;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === 'register' && form.password !== form.confirm) {
+      setErr('The two passwords do not match. Type the same password in both fields.');
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -67,9 +74,36 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           </label>
           <label className="block">
             <span className="label">Password</span>
-            <input className="field" type="password" required minLength={mode === 'register' ? 8 : 1} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <PasswordInput required minLength={mode === 'register' ? 8 : 1} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
             {mode === 'register' && <span className="mt-1 block text-sm text-stone">At least 8 characters.</span>}
           </label>
+          {mode === 'register' && (
+            <label className="block">
+              <span className="label">Confirm password</span>
+              <PasswordInput
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={form.confirm}
+                onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                aria-invalid={mismatch}
+                aria-describedby="confirm-hint"
+                className={mismatch ? 'border-red-600 focus:border-red-600' : undefined}
+              />
+              {mismatch ? (
+                <span id="confirm-hint" className="mt-1 block text-sm text-red-700">
+                  Passwords do not match yet.
+                </span>
+              ) : (
+                form.confirm &&
+                form.confirm === form.password && (
+                  <span id="confirm-hint" className="mt-1 block text-sm text-emerald-700">
+                    Passwords match.
+                  </span>
+                )
+              )}
+            </label>
+          )}
           {err && (
             <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">
               {err}
@@ -162,17 +196,21 @@ export function AccountPage() {
 }
 
 function PasswordForm() {
-  const [f, setF] = useState({ current: '', next: '' });
+  const [f, setF] = useState({ current: '', next: '', confirm: '' });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (f.next !== f.confirm) {
+      setMsg({ ok: false, text: 'The new passwords do not match.' });
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
-      await api('/auth/password', { method: 'POST', json: f });
+      await api('/auth/password', { method: 'POST', json: { current: f.current, next: f.next } });
       setMsg({ ok: true, text: 'Password changed.' });
-      setF({ current: '', next: '' });
+      setF({ current: '', next: '', confirm: '' });
     } catch (err) {
       setMsg({ ok: false, text: (err as ApiError).message });
     } finally {
@@ -185,11 +223,16 @@ function PasswordForm() {
       <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
         <label>
           <span className="label">Current password</span>
-          <input className="field" type="password" required autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} />
+          <PasswordInput required autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} />
         </label>
         <label>
           <span className="label">New password</span>
-          <input className="field" type="password" required minLength={8} autoComplete="new-password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} />
+          <PasswordInput required minLength={8} autoComplete="new-password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} />
+        </label>
+        <label className="sm:col-start-2">
+          <span className="label">Confirm new password</span>
+          <PasswordInput required minLength={8} autoComplete="new-password" value={f.confirm} onChange={(e) => setF({ ...f, confirm: e.target.value })} aria-invalid={!!f.confirm && f.confirm !== f.next} />
+          {f.confirm && f.confirm !== f.next && <span className="mt-1 block text-sm text-red-700">Passwords do not match yet.</span>}
         </label>
         <div className="flex items-center gap-3 sm:col-span-2">
           <button className="btn-deep" disabled={busy}>
