@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
-import { BarChart3, BookOpen, Database, LogOut, Image as ImageIcon, Layers, MapPinned, MessageSquare, Store, Users } from 'lucide-react';
-import type { Category, Destination } from '@shared/types';
+import { BarChart3, BookOpen, Database, LogOut, Route as RouteIcon, Image as ImageIcon, Layers, MapPinned, MessageSquare, Store, Users } from 'lucide-react';
+import type { AdminTrip, Category, Destination, TripStatus } from '@shared/types';
 import { THEMES } from '@shared/seed';
 import { useAuth } from '@/context/AuthContext';
 import { Seo } from '@/components/Seo';
 import { Photo } from '@/components/Photo';
 import { api, ApiError } from '@/lib/api';
 import { invalidate } from '@/hooks/useData';
-import { cx, niceDate } from '@/lib/format';
+import { addDays, cx, niceDate } from '@/lib/format';
 import { ResourceManager } from './ResourceManager';
+import { TripStatusBadge } from '@/components/TripStatusBadge';
 import type { Field } from './fields';
 
 const EXP = ['adventure', 'tea', 'river', 'waterfalls', 'photography', 'food', 'culture'].map((v) => ({ value: v, label: v }));
@@ -21,6 +22,7 @@ const NAV = [
   { to: 'categories', label: 'Categories', icon: Layers },
   { to: 'places', label: 'Restaurants and hotels', icon: Store },
   { to: 'posts', label: 'Stories', icon: BookOpen },
+  { to: 'trips', label: 'Trip plans', icon: RouteIcon },
   { to: 'reviews', label: 'Reviews', icon: MessageSquare },
   { to: 'users', label: 'Users', icon: Users },
 ];
@@ -247,6 +249,7 @@ export default function Admin() {
                 />
               }
             />
+            <Route path="trips" element={<TripsAdmin destinations={dests} />} />
             <Route path="reviews" element={<ReviewsAdmin />} />
             <Route path="users" element={<UsersAdmin selfId={user._id} />} />
           </Routes>
@@ -268,6 +271,9 @@ function Swatches({ t }: { t?: Record<string, string> }) {
 }
 
 interface Stats {
+  trips: number;
+  pendingTrips: number;
+  topPlanned: { _id: string; n: number }[];
   destinations: number;
   users: number;
   pendingReviews: number;
@@ -298,7 +304,9 @@ function Overview() {
         {[
           ['Page views, 30 days', total],
           ['Registered users', s.users],
+          ['Trips waiting for review', s.pendingTrips],
           ['Reviews waiting', s.pendingReviews],
+          ['Trip plans saved', s.trips],
           ['Newsletter subscribers', s.subscribers],
           ['Destinations', s.destinations],
           ['Approved reviews', s.approvedReviews],
@@ -328,7 +336,19 @@ function Overview() {
           <p className="mt-3 text-stone">No visits recorded yet. Views are counted as people browse the public site.</p>
         )}
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="rounded-2xl border rule bg-white/60 p-6">
+          <h3 className="font-sans text-lg font-semibold">Most planned destinations</h3>
+          <ol className="mt-4 space-y-2">
+            {(s.topPlanned ?? []).map((f) => (
+              <li key={f._id} className="flex justify-between">
+                <span>{f._id}</span>
+                <span className="tabular">{f.n}</span>
+              </li>
+            ))}
+            {!s.topPlanned?.length && <li className="text-stone">No trips yet.</li>}
+          </ol>
+        </div>
         <div className="rounded-2xl border rule bg-white/60 p-6">
           <h3 className="font-sans text-lg font-semibold">Most saved destinations</h3>
           <ol className="mt-4 space-y-2">
@@ -595,6 +615,131 @@ function MediaPanel() {
         <div className="h-full bg-deep transition-all" style={{ width: `${pct}%` }} />
       </div>
       {err && <p className="mt-3 text-sm text-red-700">{err}</p>}
+    </div>
+  );
+}
+
+/** Trip plans saved by signed-in travelers: read them, approve or reject, and send a suggestion. */
+function TripsAdmin({ destinations }: { destinations: Destination[] }) {
+  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected' | ''>('pending');
+  const [list, setList] = useState<AdminTrip[]>([]);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+  const name = (slug: string) => destinations.find((d) => d.slug === slug)?.name ?? slug;
+
+  const load = async () => {
+    try {
+      const l = await api<AdminTrip[]>(`/admin/trips${status ? `?status=${status}` : ''}`);
+      setList(l);
+      setNotes(Object.fromEntries(l.map((t) => [t._id!, t.adminNote ?? ''])));
+      setErr('');
+    } catch (e) {
+      setErr((e as ApiError).message);
+    }
+  };
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  const act = async (t: AdminTrip, next?: TripStatus) => {
+    setBusy(t._id!);
+    setErr('');
+    setMsg('');
+    try {
+      await api(`/admin/trips/${t.user._id}/${t._id}`, { method: 'PATCH', json: { ...(next ? { status: next } : {}), adminNote: notes[t._id!] ?? '' } });
+      setMsg(next ? `"${t.title}" ${next === 'approved' ? 'approved' : next === 'rejected' ? 'rejected' : 'moved back to review'}.` : `Suggestion sent to ${t.user.name}.`);
+      await load();
+    } catch (e) {
+      setErr((e as ApiError).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-4xl">Trip plans</h2>
+      <p className="mt-2 max-w-2xl text-stone">Trips that signed-in travelers saved. Approve or reject a plan, and write a suggestion; the traveler sees both on their account page and in the planner.</p>
+      <div className="mt-6 flex flex-wrap gap-2">
+        {([['pending', 'Waiting for review'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['', 'All']] as const).map(([v, l]) => (
+          <button key={v} className="chip" aria-pressed={status === v} onClick={() => setStatus(v)}>
+            {l}
+          </button>
+        ))}
+      </div>
+      {err && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-800">{err}</p>}
+      {msg && (
+        <p role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
+          {msg}
+        </p>
+      )}
+      <ul className="mt-6 space-y-5">
+        {list.map((t) => {
+          const days = Array.from({ length: t.days }, (_, i) => i + 1);
+          return (
+            <li key={t._id} className="rounded-2xl border rule bg-white/60 p-5 sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-display text-2xl">{t.title}</h3>
+                  <p className="mt-1 text-sm text-stone">
+                    {t.user.name} ({t.user.email}), {t.days} day{t.days > 1 ? 's' : ''}, {t.travelers} traveler{t.travelers > 1 ? 's' : ''}
+                    {t.startDate ? `, ${niceDate(t.startDate)} to ${niceDate(addDays(t.startDate, t.days - 1))}` : ', no date set'}
+                  </p>
+                  {t.updatedAt && <p className="text-xs text-stone">Last changed {niceDate(t.updatedAt)}</p>}
+                </div>
+                <TripStatusBadge status={t.status} />
+              </div>
+              <ol className="mt-4 grid gap-2 sm:grid-cols-2">
+                {days.map((d) => {
+                  const stops = t.stops.filter((s) => s.day === d);
+                  return (
+                    <li key={d} className="rounded-xl bg-black/[0.03] p-3 text-sm">
+                      <span className="font-semibold">Day {d}: </span>
+                      {stops.length ? stops.map((s) => name(s.destinationSlug)).join(', ') : <span className="text-stone">free day</span>}
+                      {stops.filter((s) => s.note).map((s) => (
+                        <span key={s.destinationSlug} className="mt-1 block text-stone">
+                          Note on {name(s.destinationSlug)}: {s.note}
+                        </span>
+                      ))}
+                    </li>
+                  );
+                })}
+              </ol>
+              <label className="mt-4 block">
+                <span className="label">Suggestion for {t.user.name.split(' ')[0]}</span>
+                <textarea
+                  className="field"
+                  rows={2}
+                  maxLength={1500}
+                  value={notes[t._id!] ?? ''}
+                  onChange={(e) => setNotes((n) => ({ ...n, [t._id!]: e.target.value }))}
+                  placeholder="For example: Ratargul is dry in this month; swap it for Lalakhal, and leave Jaflong early to beat the crowds."
+                />
+              </label>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button className="btn py-2 text-sm bg-emerald-700 text-white hover:bg-emerald-800" disabled={busy === t._id} onClick={() => act(t, 'approved')}>
+                  Approve
+                </button>
+                <button className="btn py-2 text-sm bg-red-700 text-white hover:bg-red-800" disabled={busy === t._id} onClick={() => act(t, 'rejected')}>
+                  Reject
+                </button>
+                <button className="btn-line py-2 text-sm" disabled={busy === t._id} onClick={() => act(t)}>
+                  Send suggestion only
+                </button>
+                {t.status !== 'pending' && (
+                  <button className="px-3 text-sm font-semibold text-stone hover:text-deep" disabled={busy === t._id} onClick={() => act(t, 'pending')}>
+                    Move back to review
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+        {!list.length && <li className="text-stone">No trips {status ? `with status "${status}"` : ''} yet.</li>}
+      </ul>
     </div>
   );
 }

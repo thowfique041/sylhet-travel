@@ -100,6 +100,9 @@ const itinerarySchema = new Schema(
     days: { type: Number, default: 1 },
     travelers: { type: Number, default: 1 },
     stops: [{ destinationSlug: String, day: Number, note: String, _id: false }],
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    adminNote: { type: String, default: '' },
+    reviewedAt: Date,
   },
   { timestamps: true },
 );

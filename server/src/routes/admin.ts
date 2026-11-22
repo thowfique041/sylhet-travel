@@ -127,8 +127,19 @@ admin.get('/admin/stats', async (_req, res) => {
     User.aggregate([{ $unwind: '$favorites' }, { $group: { _id: '$favorites', n: { $sum: 1 } } }, { $sort: { n: -1 } }, { $limit: 6 }]),
     PageView.aggregate([{ $match: { day: { $gte: since } } }, { $group: { _id: '$day', n: { $sum: '$count' } } }, { $sort: { _id: 1 } }]),
   ]);
+  const [tripAgg] = await User.aggregate([
+    { $unwind: '$itineraries' },
+    { $group: { _id: null, total: { $sum: 1 }, pending: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$itineraries.status', 'pending'] }, 'pending'] }, 1, 0] } } } },
+  ]);
+  const topPlanned = await User.aggregate([
+    { $unwind: '$itineraries' },
+    { $unwind: '$itineraries.stops' },
+    { $group: { _id: '$itineraries.stops.destinationSlug', n: { $sum: 1 } } },
+    { $sort: { n: -1 } },
+    { $limit: 6 },
+  ]);
   const topPages = await PageView.aggregate([{ $match: { day: { $gte: since } } }, { $group: { _id: '$path', n: { $sum: '$count' } } }, { $sort: { n: -1 } }, { $limit: 8 }]);
-  res.json({ destinations, users, pendingReviews: pending, approvedReviews: approved, subscribers, posts, places, topFavorites: favAgg, views, topPages });
+  res.json({ trips: tripAgg?.total ?? 0, pendingTrips: tripAgg?.pending ?? 0, topPlanned, destinations, users, pendingReviews: pending, approvedReviews: approved, subscribers, posts, places, topFavorites: favAgg, views, topPages });
 });
 
 // ---------- Image upload (Cloudinary) ----------
@@ -162,4 +173,46 @@ admin.post('/admin/media/record', async (req, res) => {
   const b = z.object({ path: z.string().min(3), url: z.string().url().startsWith('https://res.cloudinary.com/'), w: z.number().int().positive() }).parse(req.body);
   await recordUpload(b.path, b.url, b.w);
   res.json({ ok: true });
+});
+
+// ---------- Trip plans ----------
+admin.get('/admin/trips', async (req, res) => {
+  const status = z.enum(['pending', 'approved', 'rejected']).optional().parse(req.query.status || undefined);
+  const trips = await User.aggregate([
+    { $unwind: '$itineraries' },
+    ...(status ? [{ $match: { 'itineraries.status': status } }] : []),
+    { $sort: { 'itineraries.updatedAt': -1 } },
+    { $limit: 300 },
+    {
+      $project: {
+        _id: '$itineraries._id',
+        title: '$itineraries.title',
+        startDate: '$itineraries.startDate',
+        days: '$itineraries.days',
+        travelers: '$itineraries.travelers',
+        stops: '$itineraries.stops',
+        status: { $ifNull: ['$itineraries.status', 'pending'] },
+        adminNote: '$itineraries.adminNote',
+        reviewedAt: '$itineraries.reviewedAt',
+        updatedAt: '$itineraries.updatedAt',
+        user: { _id: '$_id', name: '$name', email: '$email' },
+      },
+    },
+  ]);
+  res.json(trips);
+});
+
+admin.patch('/admin/trips/:userId/:tripId', async (req: Request, res) => {
+  const body = z
+    .object({ status: z.enum(['pending', 'approved', 'rejected']).optional(), adminNote: z.string().trim().max(1500).optional() })
+    .refine((b) => b.status !== undefined || b.adminNote !== undefined, 'Choose a decision or write a suggestion.')
+    .parse(req.body);
+  const user = await User.findById(req.params.userId);
+  const trip = user?.itineraries.id(String(req.params.tripId));
+  if (!user || !trip) throw new HttpError(404, 'Trip not found.');
+  if (body.status) trip.status = body.status;
+  if (body.adminNote !== undefined) trip.adminNote = body.adminNote;
+  trip.reviewedAt = new Date();
+  await user.save();
+  res.json(trip);
 });

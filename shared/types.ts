@@ -169,4 +169,15 @@ export interface Itinerary {
   days: number;
   travelers: number;
   stops: ItineraryStop[];
+  /** Set by the site team after reviewing a trip saved to an account */
+  status?: TripStatus;
+  adminNote?: string;
+  reviewedAt?: string;
+  updatedAt?: string;
+}
+
+export type TripStatus = 'pending' | 'approved' | 'rejected';
+
+export interface AdminTrip extends Itinerary {
+  user: { _id: string; name: string; email: string };
 }

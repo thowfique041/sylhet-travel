@@ -113,6 +113,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             {busy ? 'Please wait' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
           {mode === 'register' && favorites.length > 0 && <p className="text-sm text-stone">Your {favorites.length} saved places will move to the new account.</p>}
+          <p className="text-sm text-stone">Trips you save to your account are visible to the SYLHET team, who may approve them or send you suggestions.</p>
         </form>
       </div>
     </section>

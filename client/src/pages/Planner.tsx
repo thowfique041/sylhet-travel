@@ -11,6 +11,7 @@ import { Photo } from '@/components/Photo';
 import { autoPlan, estimate, minimumDays, rank, type Budget, type Group, type TripType } from '@/lib/planner';
 import { MONTHS, addDays, cx, niceDate, range, taka } from '@/lib/format';
 import { ApiError } from '@/lib/api';
+import { TripStatusBadge } from '@/components/TripStatusBadge';
 
 const BUDGETS: { v: Budget; label: string }[] = [
   { v: 'low', label: 'Under ৳5,000' },
@@ -72,7 +73,7 @@ export default function Planner() {
   const doSave = async () => {
     try {
       await save();
-      setNotice({ ok: true, text: user ? 'Trip saved to your account.' : 'Trip saved in this browser. Sign in to keep it on every device.' });
+      setNotice({ ok: true, text: user ? 'Trip saved to your account. The SYLHET team will review it and may send you suggestions.' : 'Trip saved in this browser. Sign in to keep it on every device and get it reviewed by the SYLHET team.' });
     } catch (e) {
       setNotice({ ok: false, text: (e as ApiError).message });
     }
@@ -367,12 +368,23 @@ export function SavedTrips({ saved, onLoad, onRemove, light }: { saved: Itinerar
       <h3 className="font-sans text-lg font-semibold">Saved trips</h3>
       <ul className="mt-3 space-y-2">
         {saved.map((t) => (
-          <li key={t._id} className="flex items-center justify-between gap-3">
+          <li key={t._id} className="flex items-start justify-between gap-3">
             <button onClick={() => onLoad(t)} className="min-w-0 text-left hover:text-accent">
               <span className="block truncate font-medium">{t.title}</span>
               <span className="text-sm opacity-60">
                 {t.days} days, {t.stops.length} places
               </span>
+              {!t._id?.startsWith('local-') && (
+                <span className="mt-1 block">
+                  <TripStatusBadge status={t.status} />
+                </span>
+              )}
+              {t.adminNote && (
+                <span className={cx('mt-2 block rounded-lg p-2 text-sm', light ? 'bg-black/[0.04]' : 'bg-white/10')}>
+                  <span className="font-semibold">Suggestion from the SYLHET team: </span>
+                  {t.adminNote}
+                </span>
+              )}
             </button>
             <button aria-label={`Delete ${t.title}`} onClick={() => void onRemove(t._id!)} className="p-2 opacity-60 hover:text-red-400 hover:opacity-100">
               <Trash2 size={16} />

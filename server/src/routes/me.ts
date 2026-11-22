@@ -53,7 +53,8 @@ me.put('/me/itineraries/:id', requireAuth, requireDb, async (req, res) => {
   const user = await User.findById(req.auth!.sub);
   const it = user?.itineraries.id(String(req.params.id));
   if (!user || !it) throw new HttpError(404, 'Trip not found.');
-  it.set(data);
+  // Any change by the traveler sends the trip back to the team for another look.
+  it.set({ ...data, status: 'pending' });
   await user.save();
   res.json(it);
 });
