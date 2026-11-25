@@ -64,9 +64,9 @@ export function Header() {
             <span className="font-display text-[26px] font-semibold tracking-[0.18em] lg:text-[30px]">SYLHET</span>
             <span className="hidden font-bn text-sm opacity-70 sm:inline">সিলেট</span>
           </Link>
-          <nav className="hidden items-center gap-7 md:flex" aria-label="Main">
+          <nav className="hidden items-center gap-5 md:flex lg:gap-7" aria-label="Main">
             {NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} className={({ isActive }) => cx('relative text-[15px] font-medium transition-opacity hover:opacity-100', isActive ? 'opacity-100' : 'opacity-75')}>
+              <NavLink key={n.to} to={n.to} className={({ isActive }) => cx('relative whitespace-nowrap text-[15px] font-medium transition-opacity hover:opacity-100', isActive ? 'opacity-100' : 'opacity-75')}>
                 {({ isActive }) => (
                   <>
                     {n.label}
