@@ -9,13 +9,14 @@ export function invalidate(prefix = '') {
 
 /** Small cached GET hook. Public content falls back to bundled data if the API is down. */
 export function useData<T>(path: string | null) {
-  const [data, setData] = useState<T | undefined>(() => (path ? (cache.get(path) as T) : undefined));
+  // Public content renders at once from the bundled copy, then refreshes from the API.
+  const [data, setData] = useState<T | undefined>(() => (path ? ((cache.get(path) ?? fallbackFor(path)) as T | undefined) : undefined));
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(!data && !!path);
 
   const load = useCallback(async () => {
     if (!path) return;
-    setLoading(true);
+    setLoading((l) => l);
     try {
       const d = await api<T>(path);
       cache.set(path, d);
@@ -38,7 +39,14 @@ export function useData<T>(path: string | null) {
     if (hit) {
       setData(hit);
       setLoading(false);
-    } else void load();
+    } else {
+      const fb = fallbackFor(path) as T | undefined;
+      if (fb !== undefined) {
+        setData(fb);
+        setLoading(false);
+      }
+      void load();
+    }
   }, [path, load]);
 
   return { data, error, loading, reload: load };

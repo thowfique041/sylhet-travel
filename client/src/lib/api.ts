@@ -63,7 +63,11 @@ const FALLBACK: Record<string, unknown> = {
 };
 
 export function fallbackFor(path: string): unknown {
-  const [base] = path.split('?');
+  const [base, query = ''] = path.split('?');
+  const q = new URLSearchParams(query);
+  if (base === '/places' && (q.get('kind') || q.get('destination'))) {
+    return seed.PLACES.filter((p) => (!q.get('kind') || p.kind === q.get('kind')) && (!q.get('destination') || p.destinationSlug === q.get('destination')));
+  }
   if (FALLBACK[base]) return FALLBACK[base];
   const d = base.match(/^\/destinations\/([^/]+)$/);
   if (d) return seed.DESTINATIONS.find((x) => x.slug === d[1]);

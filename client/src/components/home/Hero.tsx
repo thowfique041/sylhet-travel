@@ -125,7 +125,7 @@ export function Hero({ slides, destinations }: Props) {
         dragElastic={0.12}
         onDragEnd={onDragEnd}
       >
-        <AnimatePresence initial={false} custom={dir}>
+        <AnimatePresence custom={dir}>
           <motion.div key={slide.destinationSlug + index} className="absolute inset-0 overflow-hidden" custom={dir} variants={imageVariants} initial="enter" animate="center" exit="exit">
             <motion.div
               className="absolute inset-0"
@@ -160,7 +160,7 @@ export function Hero({ slides, destinations }: Props) {
 
         {/* Ghosted Bangla name: the typographic layer behind the title */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-[8%] z-[4] overflow-hidden lg:bottom-auto lg:top-[14%]">
-          <AnimatePresence mode="popLayout" initial={false} custom={dir}>
+          <AnimatePresence mode="popLayout" custom={dir}>
             <motion.p
               key={nameBn + index}
               custom={dir}
@@ -177,7 +177,7 @@ export function Hero({ slides, destinations }: Props) {
         {/* Title block (overlaps image on all sizes) */}
         <div className="absolute inset-x-0 bottom-0 z-[5] lg:bottom-[15%]">
           <div className="wrap" aria-live="polite">
-            <AnimatePresence mode="wait" initial={false}>
+            <AnimatePresence mode="wait">
               <motion.div key={slide.destinationSlug + index} exit={{ opacity: 0, y: -14, transition: { duration: 0.35 } }}>
                 <motion.p
                   className="flex items-center gap-3 text-[15px] font-medium text-glow/85"
@@ -219,7 +219,13 @@ export function Hero({ slides, destinations }: Props) {
         </div>
 
         {/* Desktop thumbnail rail */}
-        <div className="absolute right-[max(1.5rem,calc((100vw-1360px)/2+3rem))] top-1/2 z-[6] hidden -translate-y-1/2 flex-col gap-3 xl:flex" role="tablist" aria-label="Choose destination">
+        <motion.div
+          initial={reduce ? false : { opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0, transition: { delay: 1.1, duration: 0.8, ease: EASE } }}
+          className="absolute right-[max(1.5rem,calc((100vw-1360px)/2+3rem))] top-1/2 z-[6] hidden -translate-y-1/2 flex-col gap-3 xl:flex"
+          role="tablist"
+          aria-label="Choose destination"
+        >
           {slides.map((s, i) => (
             <button
               key={s.destinationSlug}
@@ -235,10 +241,14 @@ export function Hero({ slides, destinations }: Props) {
               </span>
             </button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Desktop control bar */}
-        <div className="absolute inset-x-0 bottom-0 z-[6] hidden lg:block">
+        <motion.div
+          initial={reduce ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0, transition: { delay: 1.3, duration: 0.8, ease: EASE } }}
+          className="absolute inset-x-0 bottom-0 z-[6] hidden lg:block"
+        >
           <div className="wrap flex items-center gap-8 pb-8">
             <p className="tabular font-display text-2xl" aria-label={`Slide ${index + 1} of ${n}`}>
               <span className="text-accent">{String(index + 1).padStart(2, '0')}</span>
@@ -265,13 +275,13 @@ export function Hero({ slides, destinations }: Props) {
               <ArrowDown size={16} className="sr-only" />
             </a>
           </div>
-        </div>
+        </motion.div>
       </motion.div>
 
       {/* ---------- Mobile and tablet panel: redesigned, not shrunk ---------- */}
       <div className="relative z-[6] bg-deep pb-8 lg:hidden">
         <div className="wrap">
-          <AnimatePresence mode="wait" initial={false}>
+          <AnimatePresence mode="wait">
             <motion.div key={index} initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
               <p className="text-[16px] leading-relaxed text-glow/85">{slide.description}</p>
               {dest && <p className="mt-2 text-sm text-glow/60">Best: {dest.bestSeason}</p>}

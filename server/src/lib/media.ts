@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { v2 as cloudinary } from 'cloudinary';
 import { cloudinaryEnabled, env } from './env.js';
 import { Destination, Post, Setting, Slide } from '../models/index.js';
@@ -49,15 +50,19 @@ function sourceUrl(p: Photo) {
   return `${base}/thumb/${encode(p.path)}/1920px-${encodeURIComponent(name)}`;
 }
 
-const publicId = (path: string) =>
-  path
+/** ASCII part of the file name plus a short hash, so non-Latin names never collide. */
+const publicId = (path: string) => {
+  const ascii = path
     .split('/')
     .pop()!
     .replace(/\.[a-z]+$/i, '')
     .normalize('NFKD')
-    .replace(/[^\w-]+/g, '_')
+    .replace(/[^A-Za-z0-9-]+/g, '_')
     .replace(/_+/g, '_')
-    .slice(0, 80) || 'photo';
+    .replace(/^_|_$/g, '')
+    .slice(0, 60);
+  return `${ascii || 'photo'}_${createHash('md5').update(path).digest('hex').slice(0, 8)}`;
+};
 
 /** Every Commons photo the site uses: bundled content plus anything in the database. */
 export async function allPhotos(): Promise<Photo[]> {
@@ -133,6 +138,15 @@ export function signUpload(publicIdValue: string) {
 export async function recordUpload(path: string, url: string, w: number) {
   cache = null;
   const map = { ...(await getMediaMap()), [path]: { url, w } };
+  await Setting.updateOne({ key: KEY }, { $set: { value: map } }, { upsert: true });
+  cache = { map, at: Date.now() };
+}
+
+/** Forget the Cloudinary copy of these photos so they are uploaded again. */
+export async function resetPaths(paths: string[]) {
+  cache = null;
+  const map = { ...(await getMediaMap()) };
+  for (const p of paths) delete map[p];
   await Setting.updateOne({ key: KEY }, { $set: { value: map } }, { upsert: true });
   cache = { map, at: Date.now() };
 }

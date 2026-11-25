@@ -9,7 +9,11 @@ import { applyMedia, getMediaMap } from '../lib/media.js';
 export const content = Router();
 
 // Swap in Cloudinary URLs for photos that have been moved to the media library.
-content.use(async (_req, res, next) => {
+content.use(async (req, res, next) => {
+  // Public content can be served from Vercel's edge cache for a minute and refreshed in the background.
+  if (req.method === 'GET' && !req.path.startsWith('/health') && !req.headers.authorization) {
+    res.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=86400');
+  }
   if (!hasDatabase()) return next();
   try {
     await connectDB();
